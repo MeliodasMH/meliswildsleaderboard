@@ -195,6 +195,26 @@ export default function MonsterHunterWildsSpeedrunHub() {
     await fetchRuns();
   }
 
+  async function deleteRun(id) {
+    if (!canModerate) return;
+
+    const confirmDelete = window.confirm("Delete this run permanently?");
+    if (!confirmDelete) return;
+
+    const { error } = await supabase
+      .from("runs")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error deleting run:", error);
+      alert(`Run could not be deleted: ${error.message}`);
+      return;
+    }
+
+    await fetchRuns();
+  }
+
   async function createProfile() {
     const profileUsername = currentUser.loggedIn ? currentUser.username : loginForm.username.trim();
     const profilePassword = currentUser.loggedIn ? profileForm.password.trim() : loginForm.password.trim();
@@ -436,6 +456,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
                   <th className="px-6 py-4 text-left">Time</th>
                   <th className="px-6 py-4 text-left">Level</th>
                   <th className="px-6 py-4 text-left">Ruleset</th>
+                  {canModerate && <th className="px-6 py-4 text-left">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -457,10 +478,20 @@ export default function MonsterHunterWildsSpeedrunHub() {
                     </td>
                     <td className="px-6 py-4">{r.level}</td>
                     <td className="px-6 py-4">{r.ruleset}</td>
+                    {canModerate && (
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => deleteRun(r.id)}
+                          className="px-3 py-1 bg-red-800 hover:bg-red-700 rounded text-sm"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {recentRuns.length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-zinc-500 py-10">No runs yet.</td></tr>
+                  <tr><td colSpan={canModerate ? 8 : 7} className="text-center text-zinc-500 py-10">No runs yet.</td></tr>
                 )}
               </tbody>
             </table>
@@ -512,6 +543,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
                   <th className="px-6 py-4 text-left">Time</th>
                   <th className="px-6 py-4 text-left">Level</th>
                   <th className="px-6 py-4 text-left">Ruleset</th>
+                  {canModerate && <th className="px-6 py-4 text-left">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -533,6 +565,16 @@ export default function MonsterHunterWildsSpeedrunHub() {
                     </td>
                     <td className="px-6 py-4">{r.level}</td>
                     <td className="px-6 py-4">{r.ruleset}</td>
+                    {canModerate && (
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => deleteRun(r.id)}
+                          className="px-3 py-1 bg-red-800 hover:bg-red-700 rounded text-sm"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
