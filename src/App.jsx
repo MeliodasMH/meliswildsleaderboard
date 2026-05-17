@@ -6,13 +6,57 @@ export default function MonsterHunterWildsSpeedrunHub() {
   const [runs, setRuns] = React.useState([]);
   const [profiles, setProfiles] = React.useState([]);
 
-  const [currentUser, setCurrentUser] = React.useState({
-    username: "Guest",
-    role: "user"
+  const [loginForm, setLoginForm] = React.useState({ username: "", password: "" });
+
+  const [currentUser, setCurrentUser] = React.useState(() => {
+    const savedUser = localStorage.getItem("meliCurrentUser");
+    return savedUser
+      ? JSON.parse(savedUser)
+      : { username: "Guest", role: "user", loggedIn: false };
   });
+
+  function loginUser() {
+    const cleanUsername = loginForm.username.trim();
+    const cleanPassword = loginForm.password.trim();
+
+    if (!cleanUsername || !cleanPassword) {
+      alert("Please enter a username and password.");
+      return;
+    }
+
+    const matchingProfile = profiles.find(profile =>
+      (
+        profile.username?.toLowerCase() === cleanUsername.toLowerCase() ||
+        profile.huntername?.toLowerCase() === cleanUsername.toLowerCase() ||
+        profile.hunterName?.toLowerCase() === cleanUsername.toLowerCase()
+      ) && profile.password === cleanPassword
+    );
+
+    if (!matchingProfile) {
+      alert("Invalid username or password.");
+      return;
+    }
+
+    const nextUser = {
+      username: cleanUsername,
+      role: matchingProfile?.role || "user",
+      loggedIn: true
+    };
+
+    localStorage.setItem("meliCurrentUser", JSON.stringify(nextUser));
+    setCurrentUser(nextUser);
+    setActiveTab("profile");
+  }
+
+  function logoutUser() {
+    localStorage.removeItem("meliCurrentUser");
+    setCurrentUser({ username: "Guest", role: "user", loggedIn: false });
+    setActiveTab("recent");
+  }
 
   const [profileForm, setProfileForm] = React.useState({
     huntername: "",
+    password: "",
     platform: "PC"
   });
 
@@ -127,32 +171,46 @@ export default function MonsterHunterWildsSpeedrunHub() {
   async function rejectRun(id) {
     const { error } = await supabase
       .from("runs")
-      .delete()
+      .update({ status: "rejected" })
       .eq("id", id);
 
     if (error) {
       console.error("Error rejecting run:", error);
+      alert(`Run could not be rejected: ${error.message}`);
       return;
     }
 
-    fetchRuns();
+    await fetchRuns();
   }
 
   async function createProfile() {
-    const existingProfile = profiles.find(profile => profile.username === currentUser.username);
+    const profileUsername = currentUser.loggedIn ? currentUser.username : loginForm.username.trim();
+    const profilePassword = currentUser.loggedIn ? profileForm.password.trim() : loginForm.password.trim();
+    const profileHunterName = profileForm.huntername.trim() || profileUsername;
+
+    if (!profileUsername || !profilePassword) {
+      alert("Please enter a username and password.");
+      return;
+    }
+
+    const existingProfile = profiles.find(profile =>
+      profile.username?.toLowerCase() === profileUsername.toLowerCase() ||
+      profile.huntername?.toLowerCase() === profileHunterName.toLowerCase()
+    );
 
     if (existingProfile) {
-      alert("This account already has a hunter profile.");
+      alert("This username or hunter profile already exists.");
       return;
     }
 
     const { error } = await supabase
       .from("profiles")
       .insert({
-        username: currentUser.username,
-        huntername: profileForm.huntername,
+        username: profileUsername,
+        huntername: profileHunterName,
+        password: profilePassword,
         platform: profileForm.platform,
-        role: currentRole === "admin" ? "admin" : "user"
+        role: "user"
       });
 
     if (error) {
@@ -161,6 +219,14 @@ export default function MonsterHunterWildsSpeedrunHub() {
       return;
     }
 
+    const nextUser = {
+      username: profileUsername,
+      role: "user",
+      loggedIn: true
+    };
+
+    localStorage.setItem("meliCurrentUser", JSON.stringify(nextUser));
+    setCurrentUser(nextUser);
     await fetchProfiles();
     setActiveTab("profile");
   }
@@ -201,9 +267,9 @@ export default function MonsterHunterWildsSpeedrunHub() {
 
   function getMyProfile() {
     return profiles.find(profile =>
-      profile.username === currentUser.username ||
-      profile.huntername === currentUser.username ||
-      profile.hunterName === currentUser.username
+      profile.username?.toLowerCase() === currentUser.username?.toLowerCase() ||
+      profile.huntername?.toLowerCase() === currentUser.username?.toLowerCase() ||
+      profile.hunterName?.toLowerCase() === currentUser.username?.toLowerCase()
     ) || null;
   }
 
@@ -212,7 +278,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
   const canModerate = currentRole === "moderator" || currentRole === "admin";
   const canAdmin = currentRole === "admin";
 
-  const recentRuns = runs;
+  const recentRuns = runs.filter(r => r.status !== "rejected");
   const approvedRuns = runs.filter(r => r.status === "approved");
   const pendingRuns = runs.filter(r => r.status === "pending");
   const filteredLeaderboard = approvedRuns.filter(r => (
@@ -245,7 +311,16 @@ export default function MonsterHunterWildsSpeedrunHub() {
           </div>
         </div>
 
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap items-center">
+        {!currentUser.loggedIn ? (
+          <button onClick={() => setActiveTab("login")}>Login</button>
+        ) : (
+          <div className="flex gap-2 flex-wrap items-center text-sm text-zinc-400">
+            <span>Logged in as <span className="text-zinc-100 font-semibold">{currentUser.username}</span> • {currentRole}</span>
+            <button onClick={logoutUser}>Logout</button>
+          </div>
+        )}
+
         <button onClick={() => setActiveTab("recent")}>Recent Runs</button>
         <button onClick={() => setActiveTab("leaderboards")}>Leaderboards</button>
         <button onClick={() => setActiveTab("submit")}>Submit Run</button>
@@ -260,6 +335,75 @@ export default function MonsterHunterWildsSpeedrunHub() {
         <button onClick={() => setActiveTab("bugs")}>Bug Reports</button>
       </div>
       </header>
+
+      {/* LOGIN */}
+      {activeTab === "login" && (
+        <section className="max-w-md mx-auto px-6 py-10">
+          <div className="border border-zinc-800 bg-zinc-950 rounded-3xl p-8 space-y-5">
+            <div>
+              <h2 className="text-3xl font-bold text-zinc-100">Login</h2>
+              <p className="text-zinc-500 mt-2 text-sm">
+                Sign in with your username or hunter name to access your profile and role permissions.
+              </p>
+            </div>
+
+            <input
+              className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-200"
+              placeholder="Username / Hunter Name"
+              value={loginForm.username}
+              onChange={e => setLoginForm({...loginForm, username: e.target.value})}
+            />
+
+            <input
+              className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-200"
+              placeholder="Password"
+              type="password"
+              value={loginForm.password}
+              onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+            />
+
+            <button
+              onClick={loginUser}
+              className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700"
+            >
+              Login
+            </button>
+
+            <div className="border-t border-zinc-800 pt-5 space-y-4">
+              <div>
+                <h3 className="text-xl font-bold text-zinc-100">Create Hunter Profile</h3>
+                <p className="text-zinc-500 mt-1 text-sm">
+                  New runners can create a profile using the username and password above.
+                </p>
+              </div>
+
+              <input
+                className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-200"
+                placeholder="Hunter Name"
+                value={profileForm.huntername}
+                onChange={e => setProfileForm({...profileForm, huntername:e.target.value})}
+              />
+
+              <select
+                className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-200"
+                value={profileForm.platform}
+                onChange={e => setProfileForm({...profileForm, platform:e.target.value})}
+              >
+                <option value="PC">PC</option>
+                <option value="Xbox">Xbox</option>
+                <option value="PS5">PS5</option>
+              </select>
+
+              <button
+                onClick={createProfile}
+                className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700"
+              >
+                Create Profile & Login
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* RECENT */}
       {activeTab === "recent" && (
@@ -520,7 +664,16 @@ export default function MonsterHunterWildsSpeedrunHub() {
                 <input
                   className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl"
                   placeholder="Hunter Name"
-                  value={profileForm.huntername} onChange={e => setProfileForm({...profileForm, huntername:e.target.value})}
+                  value={profileForm.huntername}
+                  onChange={e => setProfileForm({...profileForm, huntername:e.target.value})}
+                />
+
+                <input
+                  className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl"
+                  placeholder="Password"
+                  type="password"
+                  value={profileForm.password}
+                  onChange={e => setProfileForm({...profileForm, password:e.target.value})}
                 />
 
                 <select
