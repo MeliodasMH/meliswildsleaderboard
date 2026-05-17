@@ -7,8 +7,8 @@ export default function MonsterHunterWildsSpeedrunHub() {
   const [profiles, setProfiles] = React.useState([]);
 
   const [currentUser, setCurrentUser] = React.useState({
-    username: "Meliodas",
-    role: "admin"
+    username: "Guest",
+    role: "user"
   });
 
   const [profileForm, setProfileForm] = React.useState({
@@ -36,15 +36,23 @@ export default function MonsterHunterWildsSpeedrunHub() {
     fetchRuns();
     fetchProfiles();
 
-    const channel = supabase
+    const runsChannel = supabase
       .channel("runs-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "runs" }, () => {
         fetchRuns();
       })
       .subscribe();
 
+    const profilesChannel = supabase
+      .channel("profiles-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
+        fetchProfiles();
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(runsChannel);
+      supabase.removeChannel(profilesChannel);
     };
   }, []);
 
@@ -144,7 +152,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
         username: currentUser.username,
         huntername: profileForm.huntername,
         platform: profileForm.platform,
-        role: currentUser.role === "admin" ? "admin" : "user"
+        role: currentRole === "admin" ? "admin" : "user"
       });
 
     if (error) {
@@ -157,29 +165,52 @@ export default function MonsterHunterWildsSpeedrunHub() {
     setActiveTab("profile");
   }
 
-  function promoteToModerator(id) {
-    if(currentUser.role !== "admin") return;
+  async function promoteToModerator(id) {
+    if(currentRole !== "admin") return;
 
-    setProfiles(prev => prev.map(profile =>
-      profile.id === id
-        ? { ...profile, role:"moderator" }
-        : profile
-    ));
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: "moderator" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error promoting moderator:", error);
+      alert(`Could not update role: ${error.message}`);
+      return;
+    }
+
+    await fetchProfiles();
   }
 
-  function removeModerator(id) {
-    if(currentUser.role !== "admin") return;
+  async function removeModerator(id) {
+    if(currentRole !== "admin") return;
 
-    setProfiles(prev => prev.map(profile =>
-      profile.id === id
-        ? { ...profile, role:"user" }
-        : profile
-    ));
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: "user" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error removing moderator:", error);
+      alert(`Could not update role: ${error.message}`);
+      return;
+    }
+
+    await fetchProfiles();
   }
 
   function getMyProfile() {
-    return profiles.find(profile => profile.username === currentUser.username) || null;
+    return profiles.find(profile =>
+      profile.username === currentUser.username ||
+      profile.huntername === currentUser.username ||
+      profile.hunterName === currentUser.username
+    ) || null;
   }
+
+  const currentProfile = getMyProfile();
+  const currentRole = (currentProfile?.role || currentUser.role || "user").toLowerCase();
+  const canModerate = currentRole === "moderator" || currentRole === "admin";
+  const canAdmin = currentRole === "admin";
 
   const recentRuns = runs;
   const approvedRuns = runs.filter(r => r.status === "approved");
@@ -219,11 +250,11 @@ export default function MonsterHunterWildsSpeedrunHub() {
         <button onClick={() => setActiveTab("leaderboards")}>Leaderboards</button>
         <button onClick={() => setActiveTab("submit")}>Submit Run</button>
         <button onClick={() => setActiveTab("profile")}>Profile</button>
-        {(currentUser.role === "moderator" || currentUser.role === "admin") && (
+        {canModerate && (
           <button onClick={() => setActiveTab("moderation")}>Moderation</button>
         )}
 
-        {currentUser.role === "admin" && (
+        {canAdmin && (
           <button onClick={() => setActiveTab("admin")}>Admin Panel</button>
         )}
         <button onClick={() => setActiveTab("bugs")}>Bug Reports</button>
@@ -352,7 +383,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
       )}
 
       {/* MODERATION */}
-      {activeTab === "moderation" && (currentUser.role === "moderator" || currentUser.role === "admin") && (
+      {activeTab === "moderation" && canModerate && (
         <section className="max-w-6xl mx-auto px-6 py-10">
           <h2 className="text-3xl font-bold">Moderation Panel</h2>
 
@@ -515,7 +546,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
       )}
 
       {/* ADMIN PANEL */}
-      {activeTab === "admin" && currentUser.role === "admin" && (
+      {activeTab === "admin" && canAdmin && (
         <section className="max-w-5xl mx-auto px-6 py-10">
           <div className="border border-zinc-800 bg-zinc-950 rounded-3xl p-8">
             <h2 className="text-3xl font-bold text-zinc-100 mb-6">
