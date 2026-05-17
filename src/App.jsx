@@ -87,6 +87,8 @@ export default function MonsterHunterWildsSpeedrunHub() {
   const systemOptions = ["PC","Xbox","PS5"];
 
   const [form, setForm] = React.useState({ hunter:"", weapon:weaponOptions[0], monster:monsterOptions[0], system:"PC", time:"", youtube:"", level:"10★", ruleset:"TA Wiki" });
+  const [editingRunId, setEditingRunId] = React.useState(null);
+  const [editForm, setEditForm] = React.useState({ hunter:"", weapon:"", monster:"", system:"", time:"", youtube:"", level:"", ruleset:"" });
 
   React.useEffect(() => {
     fetchRuns();
@@ -152,7 +154,8 @@ export default function MonsterHunterWildsSpeedrunHub() {
         youtube: form.youtube,
         level: form.level || "10★",
         ruleset: form.ruleset,
-        status: "pending"
+        status: "pending",
+        username: currentUser.username
       });
 
     if (error) {
@@ -212,6 +215,66 @@ export default function MonsterHunterWildsSpeedrunHub() {
       return;
     }
 
+    await fetchRuns();
+  }
+
+  function canEditRun(run) {
+    const myHunterName = getMyProfile()?.huntername || getMyProfile()?.hunterName;
+
+    return currentUser.loggedIn && (
+      canModerate ||
+      run.username?.toLowerCase() === currentUser.username?.toLowerCase() ||
+      run.hunter?.toLowerCase() === myHunterName?.toLowerCase()
+    );
+  }
+
+  function startEditingRun(run) {
+    if (!canEditRun(run)) return;
+
+    setEditingRunId(run.id);
+    setEditForm({
+      hunter: run.hunter || "",
+      weapon: run.weapon || weaponOptions[0],
+      monster: run.monster || monsterOptions[0],
+      system: run.system || "PC",
+      time: run.time || "",
+      youtube: run.youtube || "",
+      level: run.level || "10★",
+      ruleset: run.ruleset || "TA Wiki"
+    });
+  }
+
+  function cancelEditingRun() {
+    setEditingRunId(null);
+    setEditForm({ hunter:"", weapon:"", monster:"", system:"", time:"", youtube:"", level:"", ruleset:"" });
+  }
+
+  async function saveEditedRun(id) {
+    const targetRun = runs.find(run => run.id === id);
+    if (!targetRun || !canEditRun(targetRun)) return;
+
+    const { error } = await supabase
+      .from("runs")
+      .update({
+        hunter: editForm.hunter,
+        monster: editForm.monster,
+        weapon: editForm.weapon,
+        system: editForm.system,
+        time: editForm.time,
+        youtube: editForm.youtube,
+        level: editForm.level,
+        ruleset: editForm.ruleset,
+        status: canModerate ? targetRun.status : "pending"
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating run:", error);
+      alert(`Run could not be updated: ${error.message}`);
+      return;
+    }
+
+    cancelEditingRun();
     await fetchRuns();
   }
 
@@ -371,6 +434,59 @@ export default function MonsterHunterWildsSpeedrunHub() {
       </div>
       </header>
 
+      {/* EDIT RUN */}
+      {editingRunId && (
+        <section className="max-w-2xl mx-auto px-6 py-6">
+          <div className="border border-zinc-800 bg-zinc-950 rounded-3xl p-6 space-y-4">
+            <h2 className="text-2xl font-bold text-zinc-100">Edit Run</h2>
+            <p className="text-sm text-zinc-500">
+              User edits return the run to pending so moderators can re-verify it.
+            </p>
+
+            <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="Hunter Name" value={editForm.hunter} onChange={e => setEditForm({...editForm, hunter:e.target.value})} />
+
+            <select className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" value={editForm.weapon} onChange={e => setEditForm({...editForm, weapon:e.target.value})}>
+              {weaponOptions.map(w => <option key={w}>{w}</option>)}
+            </select>
+
+            <select className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" value={editForm.monster} onChange={e => setEditForm({...editForm, monster:e.target.value})}>
+              {monsterOptions.map(m => <option key={m}>{m}</option>)}
+            </select>
+
+            <select className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" value={editForm.system} onChange={e => setEditForm({...editForm, system:e.target.value})}>
+              <option value="PC">PC</option>
+              <option value="Xbox">Xbox</option>
+              <option value="PS5">PS5</option>
+            </select>
+
+            <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="Time" value={editForm.time} onChange={e => setEditForm({...editForm, time:e.target.value})} />
+            <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="YouTube Link" value={editForm.youtube} onChange={e => setEditForm({...editForm, youtube:e.target.value})} />
+
+            <select className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" value={editForm.level} onChange={e => setEditForm({...editForm, level:e.target.value})}>
+              <option>10★</option>
+              <option>9★</option>
+              <option>8★</option>
+              <option>7★</option>
+              <option>6★</option>
+            </select>
+
+            <select className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" value={editForm.ruleset} onChange={e => setEditForm({...editForm, ruleset:e.target.value})}>
+              <option>TA Wiki</option>
+              <option>Freestyle</option>
+            </select>
+
+            <div className="flex gap-3">
+              <button onClick={() => saveEditedRun(editingRunId)} className="flex-1 p-3 bg-zinc-800 border border-zinc-700 rounded-xl hover:bg-zinc-700">
+                Save Changes
+              </button>
+              <button onClick={cancelEditingRun} className="flex-1 p-3 bg-red-900/50 border border-red-800 rounded-xl hover:bg-red-800">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* LOGIN */}
       {activeTab === "login" && (
         <section className="max-w-md mx-auto px-6 py-10">
@@ -456,7 +572,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
                   <th className="px-6 py-4 text-left">Time</th>
                   <th className="px-6 py-4 text-left">Level</th>
                   <th className="px-6 py-4 text-left">Ruleset</th>
-                  {canModerate && <th className="px-6 py-4 text-left">Actions</th>}
+                  {(canModerate || currentUser.loggedIn) && <th className="px-6 py-4 text-left">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -478,20 +594,32 @@ export default function MonsterHunterWildsSpeedrunHub() {
                     </td>
                     <td className="px-6 py-4">{r.level}</td>
                     <td className="px-6 py-4">{r.ruleset}</td>
-                    {canModerate && (
+                    {(canModerate || currentUser.loggedIn) && (
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => deleteRun(r.id)}
-                          className="px-3 py-1 bg-red-800 hover:bg-red-700 rounded text-sm"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex gap-2">
+                          {canEditRun(r) && (
+                            <button
+                              onClick={() => startEditingRun(r)}
+                              className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded text-sm"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {canModerate && (
+                            <button
+                              onClick={() => deleteRun(r.id)}
+                              className="px-3 py-1 bg-red-800 hover:bg-red-700 rounded text-sm"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
                 ))}
                 {recentRuns.length === 0 && (
-                  <tr><td colSpan={canModerate ? 8 : 7} className="text-center text-zinc-500 py-10">No runs yet.</td></tr>
+                  <tr><td colSpan={(canModerate || currentUser.loggedIn) ? 8 : 7} className="text-center text-zinc-500 py-10">No runs yet.</td></tr>
                 )}
               </tbody>
             </table>
@@ -543,7 +671,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
                   <th className="px-6 py-4 text-left">Time</th>
                   <th className="px-6 py-4 text-left">Level</th>
                   <th className="px-6 py-4 text-left">Ruleset</th>
-                  {canModerate && <th className="px-6 py-4 text-left">Actions</th>}
+                  {(canModerate || currentUser.loggedIn) && <th className="px-6 py-4 text-left">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -565,14 +693,26 @@ export default function MonsterHunterWildsSpeedrunHub() {
                     </td>
                     <td className="px-6 py-4">{r.level}</td>
                     <td className="px-6 py-4">{r.ruleset}</td>
-                    {canModerate && (
+                    {(canModerate || currentUser.loggedIn) && (
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => deleteRun(r.id)}
-                          className="px-3 py-1 bg-red-800 hover:bg-red-700 rounded text-sm"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex gap-2">
+                          {canEditRun(r) && (
+                            <button
+                              onClick={() => startEditingRun(r)}
+                              className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded text-sm"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {canModerate && (
+                            <button
+                              onClick={() => deleteRun(r.id)}
+                              className="px-3 py-1 bg-red-800 hover:bg-red-700 rounded text-sm"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
