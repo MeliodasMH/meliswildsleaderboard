@@ -142,7 +142,26 @@ export default function MonsterHunterWildsSpeedrunHub() {
   }
 
 
+  function isValidYouTubeUrl(url) {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+
+      return (
+        host.includes("youtube.com") ||
+        host.includes("youtu.be")
+      );
+    } catch {
+      return false;
+    }
+  }
+
   async function submitRun() {
+    if (!isValidYouTubeUrl(form.youtube)) {
+      alert("Please enter a valid YouTube video link.");
+      return;
+    }
+
     const { error } = await supabase
       .from("runs")
       .insert({
@@ -250,6 +269,11 @@ export default function MonsterHunterWildsSpeedrunHub() {
   }
 
   async function saveEditedRun(id) {
+    if (!isValidYouTubeUrl(editForm.youtube)) {
+      alert("Please enter a valid YouTube video link.");
+      return;
+    }
+
     const targetRun = runs.find(run => run.id === id);
     if (!targetRun || !canEditRun(targetRun)) return;
 
@@ -460,7 +484,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
             </select>
 
             <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="Time" value={editForm.time} onChange={e => setEditForm({...editForm, time:e.target.value})} />
-            <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="YouTube Link" value={editForm.youtube} onChange={e => setEditForm({...editForm, youtube:e.target.value})} />
+            <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="YouTube Video Link Only" value={editForm.youtube} onChange={e => setEditForm({...editForm, youtube:e.target.value})} />
 
             <select className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" value={editForm.level} onChange={e => setEditForm({...editForm, level:e.target.value})}>
               <option>10★</option>
@@ -1010,11 +1034,10 @@ export default function MonsterHunterWildsSpeedrunHub() {
 
           <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="Time 00'00''00" value={form.time} onChange={e => setForm({...form, time:e.target.value})} />
 
-          <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="YouTube Link" value={form.youtube} onChange={e => setForm({...form, youtube:e.target.value})} />
+          <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="YouTube Video Link Only" value={form.youtube} onChange={e => setForm({...form, youtube:e.target.value})} />
 
           <select className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" value={form.level} onChange={e => setForm({...form, level:e.target.value})}>
             <option value="10★">10★</option>
-            <option>10★</option>
             <option>9★</option>
             <option>8★</option>
             <option>7★</option>
