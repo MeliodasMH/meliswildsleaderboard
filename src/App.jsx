@@ -324,7 +324,9 @@ export default function MonsterHunterWildsSpeedrunHub() {
         <button onClick={() => setActiveTab("recent")}>Recent Runs</button>
         <button onClick={() => setActiveTab("leaderboards")}>Leaderboards</button>
         <button onClick={() => setActiveTab("submit")}>Submit Run</button>
-        <button onClick={() => setActiveTab("profile")}>Profile</button>
+        {currentUser.loggedIn && getMyProfile() && (
+          <button onClick={() => setActiveTab("profile")}>Profile</button>
+        )}
         {canModerate && (
           <button onClick={() => setActiveTab("moderation")}>Moderation</button>
         )}
