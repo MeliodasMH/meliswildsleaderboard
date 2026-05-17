@@ -15,7 +15,17 @@ export default function MonsterHunterWildsSpeedrunHub() {
       : { username: "Guest", role: "user", loggedIn: false };
   });
 
-  function loginUser() {
+  async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  async function loginUser() {
     const cleanUsername = loginForm.username.trim();
     const cleanPassword = loginForm.password.trim();
 
@@ -24,12 +34,14 @@ export default function MonsterHunterWildsSpeedrunHub() {
       return;
     }
 
+    const hashedPassword = await hashPassword(cleanPassword);
+
     const matchingProfile = profiles.find(profile =>
       (
         profile.username?.toLowerCase() === cleanUsername.toLowerCase() ||
         profile.huntername?.toLowerCase() === cleanUsername.toLowerCase() ||
         profile.hunterName?.toLowerCase() === cleanUsername.toLowerCase()
-      ) && profile.password === cleanPassword
+      ) && profile.password === hashedPassword
     );
 
     if (!matchingProfile) {
@@ -187,6 +199,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
     const profileUsername = currentUser.loggedIn ? currentUser.username : loginForm.username.trim();
     const profilePassword = currentUser.loggedIn ? profileForm.password.trim() : loginForm.password.trim();
     const profileHunterName = profileForm.huntername.trim() || profileUsername;
+    const hashedPassword = await hashPassword(profilePassword);
 
     if (!profileUsername || !profilePassword) {
       alert("Please enter a username and password.");
@@ -208,7 +221,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
       .insert({
         username: profileUsername,
         huntername: profileHunterName,
-        password: profilePassword,
+        password: hashedPassword,
         platform: profileForm.platform,
         role: "user"
       });
