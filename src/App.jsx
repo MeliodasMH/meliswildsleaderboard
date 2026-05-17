@@ -131,12 +131,20 @@ export default function MonsterHunterWildsSpeedrunHub() {
   }
 
   async function createProfile() {
+    const existingProfile = profiles.find(profile => profile.username === currentUser.username);
+
+    if (existingProfile) {
+      alert("This account already has a hunter profile.");
+      return;
+    }
+
     const { error } = await supabase
       .from("profiles")
       .insert({
+        username: currentUser.username,
         huntername: profileForm.huntername,
         platform: profileForm.platform,
-        role: "user"
+        role: currentUser.role === "admin" ? "admin" : "user"
       });
 
     if (error) {
@@ -170,7 +178,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
   }
 
   function getMyProfile() {
-    return profiles.length ? profiles[profiles.length-1] : null;
+    return profiles.find(profile => profile.username === currentUser.username) || null;
   }
 
   const recentRuns = runs;
