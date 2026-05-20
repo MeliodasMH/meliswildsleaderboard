@@ -238,6 +238,8 @@ export default function MonsterHunterWildsSpeedrunHub() {
   }
 
   function canEditRun(run) {
+    if (run.status === "approved") return false;
+
     const myHunterName = getMyProfile()?.huntername || getMyProfile()?.hunterName;
 
     return currentUser.loggedIn && (
@@ -401,12 +403,26 @@ export default function MonsterHunterWildsSpeedrunHub() {
   const recentRuns = runs.filter(r => r.status !== "rejected");
   const approvedRuns = runs.filter(r => r.status === "approved");
   const pendingRuns = runs.filter(r => r.status === "pending");
+  function timeToMilliseconds(timeString) {
+    if (!timeString) return Number.MAX_SAFE_INTEGER;
+
+    const match = timeString.match(/(\d+)'(\d+)\"(\d+)/);
+    if (!match) return Number.MAX_SAFE_INTEGER;
+
+    const minutes = parseInt(match[1], 10);
+    const seconds = parseInt(match[2], 10);
+    const centiseconds = parseInt(match[3], 10);
+
+    return (minutes * 60000) + (seconds * 1000) + (centiseconds * 10);
+  }
+
   const filteredLeaderboard = approvedRuns.filter(r => (
     (leaderFilters.monster === "All" || r.monster === leaderFilters.monster) &&
     (leaderFilters.weapon === "All" || r.weapon === leaderFilters.weapon) &&
     (leaderFilters.ruleset === "All" || r.ruleset === leaderFilters.ruleset) &&
     (leaderFilters.level === "All" || r.level === leaderFilters.level)
-  ));
+  ))
+  .sort((a, b) => timeToMilliseconds(a.time) - timeToMilliseconds(b.time));
 
   return (
     <>
@@ -464,7 +480,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
           <div className="border border-zinc-800 bg-zinc-950 rounded-3xl p-6 space-y-4">
             <h2 className="text-2xl font-bold text-zinc-100">Edit Run</h2>
             <p className="text-sm text-zinc-500">
-              User edits return the run to pending so moderators can re-verify it.
+              Pending runs can be edited. Once a run reaches the leaderboard, it is locked from editing.
             </p>
 
             <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="Hunter Name" value={editForm.hunter} onChange={e => setEditForm({...editForm, hunter:e.target.value})} />
@@ -1032,7 +1048,28 @@ export default function MonsterHunterWildsSpeedrunHub() {
             <option value="PS5">PS5</option>
           </select>
 
-          <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="Time 00'00''00" value={form.time} onChange={e => setForm({...form, time:e.target.value})} />
+          <input
+              className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl"
+              placeholder={`00'00"00`}
+              maxLength={8}
+              value={form.time}
+              onChange={e => {
+                let value = e.target.value.replace(/[^\d]/g, "");
+            
+                if (value.length > 2) {
+                  value = value.slice(0, 2) + "'" + value.slice(2);
+                }
+            
+                if (value.length > 5) {
+                  value = value.slice(0, 5) + '"' + value.slice(5);
+                }
+            
+                setForm({
+                  ...form,
+                  time: value.slice(0, 8)
+                });
+              }}
+            />
 
           <input className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl" placeholder="YouTube Video Link Only" value={form.youtube} onChange={e => setForm({...form, youtube:e.target.value})} />
 
