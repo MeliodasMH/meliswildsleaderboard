@@ -460,6 +460,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
         <button onClick={() => setActiveTab("recent")}>Recent Runs</button>
         <button onClick={() => setActiveTab("leaderboards")}>Leaderboards</button>
         <button onClick={() => setActiveTab("submit")}>Submit Run</button>
+        <button onClick={() => setActiveTab("rules")}>Rules</button>
         {currentUser.loggedIn && getMyProfile() && (
           <button onClick={() => setActiveTab("profile")}>Profile</button>
         )}
@@ -983,6 +984,54 @@ export default function MonsterHunterWildsSpeedrunHub() {
                   No users created yet.
                 </div>
               )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* RULES */}
+      {activeTab === "rules" && (
+        <section className="max-w-5xl mx-auto px-6 py-10">
+          <div className="border border-zinc-800 bg-zinc-950 rounded-3xl p-8 space-y-8">
+            <div>
+              <h2 className="text-3xl font-bold text-zinc-100">Rules</h2>
+              <p className="text-zinc-500 mt-2 text-sm">
+                Read these rules before submitting a run. Incorrect submissions may be rejected by moderators.
+              </p>
+            </div>
+
+            <div className="grid gap-6">
+              <div className="border border-zinc-800 rounded-2xl bg-black/40 p-6">
+                <h3 className="text-2xl font-bold text-zinc-100 mb-4">Submission Rules</h3>
+                <ul className="space-y-3 text-zinc-400 list-disc pl-5">
+                  <li>Damage numbers must be on.</li>
+                  <li>You must show your gear, skills, and food skills, preferably at the end of the fight.</li>
+                  <li>All submitted runs must start at or before the Begin Quest visual and end at the Rewards Screen.</li>
+                  <li>The use of visual mods is allowed so long as it does not get in the way.</li>
+                  <li>Mods that alter, change, or affect monster size, monster behavior, monster HP, Palico damage, or hunter damage are strictly forbidden.</li>
+                  <li>Currently only accepting solo runs.</li>
+                  <li>Currently only accepting runs from YouTube.</li>
+                </ul>
+              </div>
+
+              <div className="border border-zinc-800 rounded-2xl bg-black/40 p-6">
+                <h3 className="text-2xl font-bold text-zinc-100 mb-4">Freestyle Rules</h3>
+                <ul className="space-y-3 text-zinc-400 list-disc pl-5">
+                  <li>All food skills, bombs, traps, slinger ammo, and environmental damage are allowed.</li>
+                </ul>
+              </div>
+
+              <div className="border border-zinc-800 rounded-2xl bg-black/40 p-6">
+                <h3 className="text-2xl font-bold text-zinc-100 mb-4">TA Wiki Rules</h3>
+                <ul className="space-y-3 text-zinc-400 list-disc pl-5">
+                  <li>No Palico.</li>
+                  <li>No mantles.</li>
+                  <li>No slinger ammo, traps, bombs, or environmental damage of any kind.</li>
+                  <li>No turf wars.</li>
+                  <li>All damage must come only from you and your weapon.</li>
+                  <li>No Heroics.</li>
+                </ul>
+              </div>
             </div>
           </div>
         </section>
