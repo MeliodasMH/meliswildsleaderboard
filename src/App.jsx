@@ -433,10 +433,10 @@ export default function MonsterHunterWildsSpeedrunHub() {
       <header className="border-b border-zinc-800 bg-zinc-950 px-6 py-5 flex flex-col gap-4">
         <div className="flex flex-col">
           <h1 className="text-4xl font-black tracking-tight text-zinc-100">
-            Meli's Speedrun Leaderboards
+            Monster Hunter Wilds Speedrun Leaderboards
           </h1>
           <p className="text-zinc-500 mt-1 text-sm uppercase tracking-[0.25em]">
-            Monster Hunter Wilds (DLC Placeholder) Speedrunning Platform
+            Beta Version 1.0.1
           </p>
 
           <div className="mt-3 inline-flex items-center gap-2 w-fit px-4 py-2 rounded-full border border-amber-700/40 bg-amber-500/10 backdrop-blur-sm shadow-[0_0_25px_rgba(245,158,11,0.12)]">
@@ -1093,7 +1093,7 @@ export default function MonsterHunterWildsSpeedrunHub() {
       )}
 
       <footer className="border-t border-zinc-800 py-10 px-6 text-center text-zinc-500 text-sm">
-        Monster Hunter Wilds Speedrun Hub  
+        Join The Discord  
       </footer> 
     </div>
     </>
